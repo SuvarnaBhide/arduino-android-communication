@@ -1,5 +1,7 @@
 package com.example.arduinoledcontroller;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
@@ -17,6 +19,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,8 +28,20 @@ import java.util.UUID;
 
 import static android.content.ContentValues.TAG;
 
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.firestore.CollectionReference;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.EventListener;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.FirebaseFirestoreException;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
+
 public class MainActivity extends AppCompatActivity {
 
+    private static final String TAG = "SendToFireStore";
     private String deviceAddress = null;
     public static Handler handler;
     public static BluetoothSocket mmSocket;
@@ -36,6 +51,12 @@ public class MainActivity extends AppCompatActivity {
     // The following variables used in bluetooth handler to identify message status
     private final static int CONNECTION_STATUS = 1;
     private final static int MESSAGE_READ = 2;
+
+    private TextView textViewData;
+
+    private FirebaseFirestore db = FirebaseFirestore.getInstance();
+    private CollectionReference cmdsRef = db.collection("BluetoothCommunication");
+    //private DocumentReference cmdRef = db.document("BluetoothCommunication/LED OnOff Commands");
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,7 +70,8 @@ public class MainActivity extends AppCompatActivity {
         final TextView ledStatus = findViewById(R.id.textLedStatus);
         Button buttonOn = findViewById(R.id.buttonOn);
         Button buttonOff = findViewById(R.id.buttonOff);
-        Button buttonBlink = findViewById(R.id.buttonBlink);
+        //Button buttonBlink = findViewById(R.id.buttonBlink);
+        textViewData = findViewById(R.id.text_view_data);
 
         // Code for the "Connect" button
         buttonConnect.setOnClickListener(new View.OnClickListener() {
@@ -121,6 +143,8 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 String androidCmd = "1";
+                ArduinoCommand arduinoCommand = new ArduinoCommand(androidCmd, "LED is turned ON");
+                cmdsRef.add(arduinoCommand);
                 connectedThread.write(androidCmd);
             }
         });
@@ -130,18 +154,73 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
                 String androidCmd = "0";
+
+                ArduinoCommand arduinoCommand = new ArduinoCommand(androidCmd, "LED is turned OFF");
+                cmdsRef.add(arduinoCommand);
                 connectedThread.write(androidCmd);
             }
         });
 
         // Code to make the LED blinking
-        buttonBlink.setOnClickListener(new View.OnClickListener() {
+        /*buttonBlink.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 String androidCmd = "d";
                 connectedThread.write(androidCmd);
             }
+        });*/
+    }
+
+    /*@Override
+    protected void onStart() {
+        super.onStart();
+        cmdsRef.addSnapshotListener(this, new EventListener<QuerySnapshot>() {
+            @Override
+            public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots, @Nullable FirebaseFirestoreException error) {
+
+                if(error != null) {
+                    return;
+                }
+
+                String data = "";
+
+                for(QueryDocumentSnapshot documentSnapshot : queryDocumentSnapshots){
+
+                    ArduinoCommand arduinoCommand = documentSnapshot.toObject(ArduinoCommand.class);
+                    arduinoCommand.setDocumentId(documentSnapshot.getId());
+
+                    String command = arduinoCommand.getCommand();
+                    String description = arduinoCommand.getCommandDescription();
+
+                    data += command + " - " + description + "\n\n";
+                }
+
+                textViewData.setText(data);
+            }
         });
+    }*/
+
+    public void loadCommands(View v){
+        cmdsRef.get()
+                .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
+                    @Override
+                    public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
+                        String data = "";
+
+                        for(QueryDocumentSnapshot documentSnapshot : queryDocumentSnapshots){
+
+                            ArduinoCommand arduinoCommand = documentSnapshot.toObject(ArduinoCommand.class);
+                            arduinoCommand.setDocumentId(documentSnapshot.getId());
+
+                            String command = arduinoCommand.getCommand();
+                            String description = arduinoCommand.getCommandDescription();
+
+                            data += command + " - " + description + "\n\n";
+                        }
+
+                        textViewData.setText(data);
+                    }
+                });
     }
 
     /* ============================ Thread to Create Connection ================================= */
