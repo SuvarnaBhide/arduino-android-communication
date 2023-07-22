@@ -42,7 +42,7 @@ public class ConvertFirestoreDataToJSON extends AppCompatActivity {
                 CSVWriter writer = new CSVWriter(new FileWriter(file, true));
 
                 //List<String[]> data = new ArrayList<String[]>();
-                String[] columnNames = {"Command entered", "Command Description"};
+                String[] columnNames = {"Command entered", "Command Description", "Timestamp"};
 
                 writer.writeNext(columnNames);
 
@@ -55,8 +55,9 @@ public class ConvertFirestoreDataToJSON extends AppCompatActivity {
 
                         String command = arduinoCommand.getCommand();
                         String description = arduinoCommand.getCommandDescription();
+                        String timestamp = arduinoCommand.getTimestamp().toString();
 
-                        String[] data = {command, description};
+                        String[] data = {command, description, timestamp};
                         writer.writeNext(data);
 
                     }

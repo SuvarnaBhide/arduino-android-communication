@@ -26,6 +26,7 @@ import android.widget.Toast;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Date;
 import java.util.UUID;
 
 import com.google.firebase.firestore.CollectionReference;
@@ -128,7 +129,7 @@ public class MainActivity extends AppCompatActivity {
         // Code to turn ON LED
         buttonOn.setOnClickListener(view -> {
             String androidCmd = "1";
-            ArduinoCommand arduinoCommand = new ArduinoCommand(androidCmd, "LED is turned ON");
+            ArduinoCommand arduinoCommand = new ArduinoCommand(androidCmd, "LED is turned ON", new Date());
             cmdsRef.add(arduinoCommand);
             connectedThread.write(androidCmd);
         });
@@ -137,7 +138,7 @@ public class MainActivity extends AppCompatActivity {
         buttonOff.setOnClickListener(view -> {
             String androidCmd = "0";
 
-            ArduinoCommand arduinoCommand = new ArduinoCommand(androidCmd, "LED is turned OFF");
+            ArduinoCommand arduinoCommand = new ArduinoCommand(androidCmd, "LED is turned OFF", new Date());
             cmdsRef.add(arduinoCommand);
             connectedThread.write(androidCmd);
         });
@@ -229,8 +230,9 @@ public class MainActivity extends AppCompatActivity {
 
                         String command = arduinoCommand.getCommand();
                         String description = arduinoCommand.getCommandDescription();
+                        String timestamp = arduinoCommand.getTimestamp().toString();
 
-                        data += command + " - " + description + "\n\n";
+                        data += command + " - " + description + "(" +  timestamp + ")" + "\n\n";
                     }
 
                     textViewData.setText(data);
