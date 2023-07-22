@@ -1,9 +1,10 @@
 package com.example.arduinoledcontroller;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
@@ -11,6 +12,7 @@ import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -26,23 +28,13 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.UUID;
 
-import static android.content.ContentValues.TAG;
-
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.firestore.CollectionReference;
-import com.google.firebase.firestore.DocumentReference;
-import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
-import com.google.firebase.firestore.QuerySnapshot;
 
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "SendToFireStore";
-    private String deviceAddress = null;
     public static Handler handler;
     public static BluetoothSocket mmSocket;
     public static ConnectedThread connectedThread;
@@ -53,9 +45,10 @@ public class MainActivity extends AppCompatActivity {
     private final static int MESSAGE_READ = 2;
 
     private TextView textViewData;
+    private View downloadButtonView;
 
-    private FirebaseFirestore db = FirebaseFirestore.getInstance();
-    private CollectionReference cmdsRef = db.collection("BluetoothCommunication");
+    private final FirebaseFirestore db = FirebaseFirestore.getInstance();
+    private final CollectionReference cmdsRef = db.collection("BluetoothCommunication");
     //private DocumentReference cmdRef = db.document("BluetoothCommunication/LED OnOff Commands");
 
     @Override
@@ -74,17 +67,14 @@ public class MainActivity extends AppCompatActivity {
         textViewData = findViewById(R.id.text_view_data);
 
         // Code for the "Connect" button
-        buttonConnect.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                // This is the code to move to another screen
-                Intent intent = new Intent(MainActivity.this, SelectDeviceActivity.class);
-                startActivity(intent);
-            }
+        buttonConnect.setOnClickListener(view -> {
+            // This is the code to move to another screen
+            Intent intent = new Intent(MainActivity.this, SelectDeviceActivity.class);
+            startActivity(intent);
         });
 
         // Get Device Address from SelectDeviceActivity.java to create connection
-        deviceAddress = getIntent().getStringExtra("deviceAddress");
+        String deviceAddress = getIntent().getStringExtra("deviceAddress");
         if (deviceAddress != null) {
             bluetoothStatus.setText("Connecting...");
             /*
@@ -128,37 +118,28 @@ public class MainActivity extends AppCompatActivity {
         };
 
         // Code for the disconnect button
-        buttonDisconnect.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (createConnectThread != null) {
-                    createConnectThread.cancel();
-                    bluetoothStatus.setText("Bluetooth is Disconnected");
-                }
+        buttonDisconnect.setOnClickListener(view -> {
+            if (createConnectThread != null) {
+                createConnectThread.cancel();
+                bluetoothStatus.setText("Bluetooth is Disconnected");
             }
         });
 
         // Code to turn ON LED
-        buttonOn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                String androidCmd = "1";
-                ArduinoCommand arduinoCommand = new ArduinoCommand(androidCmd, "LED is turned ON");
-                cmdsRef.add(arduinoCommand);
-                connectedThread.write(androidCmd);
-            }
+        buttonOn.setOnClickListener(view -> {
+            String androidCmd = "1";
+            ArduinoCommand arduinoCommand = new ArduinoCommand(androidCmd, "LED is turned ON");
+            cmdsRef.add(arduinoCommand);
+            connectedThread.write(androidCmd);
         });
 
         // Code to turn OFF LED
-        buttonOff.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                String androidCmd = "0";
+        buttonOff.setOnClickListener(view -> {
+            String androidCmd = "0";
 
-                ArduinoCommand arduinoCommand = new ArduinoCommand(androidCmd, "LED is turned OFF");
-                cmdsRef.add(arduinoCommand);
-                connectedThread.write(androidCmd);
-            }
+            ArduinoCommand arduinoCommand = new ArduinoCommand(androidCmd, "LED is turned OFF");
+            cmdsRef.add(arduinoCommand);
+            connectedThread.write(androidCmd);
         });
 
         // Code to make the LED blinking
@@ -169,6 +150,12 @@ public class MainActivity extends AppCompatActivity {
                 connectedThread.write(androidCmd);
             }
         });*/
+
+        View downloadButton = findViewById(R.id.downloadButton);
+        downloadButton.setOnClickListener(v -> {
+            downloadButtonView = v;
+            downloadExcel(v);
+        });
     }
 
     /*@Override
@@ -200,26 +187,53 @@ public class MainActivity extends AppCompatActivity {
         });
     }*/
 
+    public void downloadExcel(View v){
+
+        //Check if the required permissions are granted
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                    1);
+        } else{
+            Log.d(TAG, "Is permission granted ? = " + (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    == PackageManager.PERMISSION_GRANTED));
+            ConvertFirestoreDataToJSON convertFirestoreDataToJSON = new ConvertFirestoreDataToJSON();
+            convertFirestoreDataToJSON.downloadExcel(v, MainActivity.this);
+        }
+        Toast.makeText(this, "File successfully created!", Toast.LENGTH_LONG).show();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == 1) {
+            if (!(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+                Toast.makeText(this, "Permission denied. Cannot save file.", Toast.LENGTH_SHORT).show();
+            }
+            else {
+                downloadExcel(downloadButtonView);
+            }
+        }
+    }
+
     public void loadCommands(View v){
         cmdsRef.get()
-                .addOnSuccessListener(new OnSuccessListener<QuerySnapshot>() {
-                    @Override
-                    public void onSuccess(QuerySnapshot queryDocumentSnapshots) {
-                        String data = "";
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    String data = "";
 
-                        for(QueryDocumentSnapshot documentSnapshot : queryDocumentSnapshots){
+                    for(QueryDocumentSnapshot documentSnapshot : queryDocumentSnapshots){
 
-                            ArduinoCommand arduinoCommand = documentSnapshot.toObject(ArduinoCommand.class);
-                            arduinoCommand.setDocumentId(documentSnapshot.getId());
+                        ArduinoCommand arduinoCommand = documentSnapshot.toObject(ArduinoCommand.class);
+                        arduinoCommand.setDocumentId(documentSnapshot.getId());
 
-                            String command = arduinoCommand.getCommand();
-                            String description = arduinoCommand.getCommandDescription();
+                        String command = arduinoCommand.getCommand();
+                        String description = arduinoCommand.getCommandDescription();
 
-                            data += command + " - " + description + "\n\n";
-                        }
-
-                        textViewData.setText(data);
+                        data += command + " - " + description + "\n\n";
                     }
+
+                    textViewData.setText(data);
                 });
     }
 
@@ -249,6 +263,7 @@ public class MainActivity extends AppCompatActivity {
             mmSocket = tmp;
         }
 
+        @RequiresApi(api = Build.VERSION_CODES.S)
         public void run() {
             // Cancel discovery because it otherwise slows down the connection.
             BluetoothAdapter bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -299,13 +314,11 @@ public class MainActivity extends AppCompatActivity {
 
     /* =============================== Thread for Data Exchange ================================= */
     public static class ConnectedThread extends Thread {
-        private final BluetoothSocket mmSocket;
         private final InputStream mmInStream;
         private final OutputStream mmOutStream;
 
         // Getting Input and Output Stream when connected to Arduino Board
         public ConnectedThread(BluetoothSocket socket) {
-            mmSocket = socket;
             InputStream tmpIn = null;
             OutputStream tmpOut = null;
             try {
@@ -325,7 +338,7 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     // Read from the InputStream
                     buffer[bytes] = (byte) mmInStream.read();
-                    String arduinoMsg = null;
+                    String arduinoMsg;
 
                     // Parsing the incoming data stream
                     if (buffer[bytes] == '\n'){

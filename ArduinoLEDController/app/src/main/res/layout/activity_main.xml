@@ -89,9 +89,23 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Blinking" /-->
+
+
+        <Button
+            android:id="@+id/downloadButton"
+            android:layout_marginTop="16dp"
+            android:layout_width="wrap_content"
+            android:layout_marginLeft="60dp"
+            android:layout_marginRight="60dp"
+            android:layout_height="wrap_content"
+            android:onClick="downloadExcel"
+            android:text="Download Excel Sheet"/>
+
         <Button
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginLeft="60dp"
+            android:layout_marginRight="60dp"
             android:text="Load All Commands"
             android:onClick="loadCommands"/>
 
