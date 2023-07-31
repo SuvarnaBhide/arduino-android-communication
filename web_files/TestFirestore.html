@@ -1,5 +1,17 @@
 <html>
 <body>
+
+<h3>ARDUINO DATA</h3>
+
+        <table id="tbl_account_list" border="2" cellpadding="10" style="border-collapse:collapse;">
+            <thead>
+                <th>ID</th>
+                <th>COMMAND</th>
+                <th>TIMESTAMP</th>
+                <th>DESCRIPTION</th>
+            </thead>
+        </table>
+		
 <script type="module">
 
 	import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
@@ -19,14 +31,38 @@
 	const app = initializeApp(firebaseConfig);
 	const db = getFirestore();
 	const colRef = collection(db, "BluetoothCommunication");
+	const accountList = document.querySelector('#tbl_account_list') ;
+
 	try {
 		const docsSnap = await getDocs(colRef);
 		docsSnap.forEach(doc => {
-			console.log(doc.data());
-			console.log(doc.id);
+			//console.log(doc.data());
+			//console.log(doc.id);
+			renderAccount(doc);
 		})
 	} catch (error) {
 		console.log(error);
+	}
+	
+	function renderAccount(doc) {
+		let tr = document.createElement('tr');
+		let td_id = document.createElement('td');
+		let td_command = document.createElement('td');
+		let td_timestamp = document.createElement('td');
+		let td_description = document.createElement('td');
+
+		//tr.setAttribute('data-id', doc.id);
+		td_id.textContent = doc.id;
+		td_command.textContent = doc.data().command;
+		td_timestamp.textContent = doc.data().timestamp.toDate();
+		td_description.textContent = doc.data().commandDescription;
+
+		tr.appendChild(td_id);
+		tr.appendChild(td_command);
+		tr.appendChild(td_timestamp);
+		tr.appendChild(td_description);
+
+		accountList.appendChild(tr);
 	}
 </script>
 
